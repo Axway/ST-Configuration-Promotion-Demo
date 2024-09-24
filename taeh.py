@@ -3,7 +3,6 @@ import os
 import dotenv
 import requests
 
-from STWC_OAuth import token
 
 # SETTINGS
 dotenv_path = ".env"
@@ -11,9 +10,8 @@ dotenv.load_dotenv(dotenv_path)
 hashiToken = os.environ.get("VAULT_TOKEN")
 hashiHost = os.environ.get("VAULT_HOST")
 
-st_secret = 'wsaKucHdzc+qAOguAFgECImJbllKV/CEbPZ3P8IwgnsLO/2DBvrHsEnk4JBv1kDGqa07yjtFXzkkK0VVtelm0/hNpAh0F4ZAn0aLvtlRnhUqi0GMwbn4XjhyrU/2znfV/rtQhkFtCttROrnTMIy0oNzkfFZkTZQstfc20CmvvbrIII7BvVED+2bNkIw0rP6F9LdQ8iCS22EfgkvL5p9wEeunQx+kgylLJGErVSC4E8L4urc1+hqgUDkzCT2PHVwE0k4iF1xCZE2Ho4sbLmXke9fZEUJiQCA19vpNJhIYJ4oueeB2L84r7A/OmJe8FgoaW/jMWclVCnrUYj34oZs78z7eRa3Hvvc9FvCYUq1f/PwhJsp+dFTHqf2DIx/tsssb9PtC/S4DcUojvgibaWSyxAJ2OL31RCETGoRPosbe27eKZsRsrrdJzkCwE6d3u15bVQ2o8pNyy8wI1eM0M9Oc2hof2EyQHtvuvQlPi4QJnYO+WRyfurRDvSYDaV2uUC3UEwhI46d88gPKNF48rsA1Mo9uDGjlyBqFp4HiJQ69LL0rXGZ5HI/MlFPquPFPt8yUlheEIZ6ioNQ5g8zaXa1ZvjR1LdtS7/4W2jYRGsC3ySNXGHP4LA7a4RxFhXdyfrwyWBgOCoLCXwGLzph1ww4CLco28qVm6lJQzYME2N8QQy4LK/5bGX1C4UtXevACzkd1S3yyte2j+oflpMJvo+F//uHNPuPtXnJX7iivLBP3cN1474BaePcH8BJpz/G0Ysx8FVqIK+QBMYHo44mRr6QffLP5zPDN1Ur0u7+7YLIVaCDSltMy5dUUSpqSTsbKQatzrLtAWkQw5mm45UqNfMUjAAUJGgl+YquL5MXN8v+TAkW3pQ7+QZez4W67XaYkeSU2/dt3HP9GxNDucWOHKUgvs6AVr9KGQJpWlUhYdY3hqdYorNrpgU39HaCEad44cEeZKVpp24mNyaZWyXIgaTkkhz6tif194GxK8IlJjbeVPjw1FSLLS3vWpLb48cI/28gNNBZ79V0YAwXVZ/VBPwSyz2B6/UUIq/5PVsbc3MpULVyMVQNk6OjjII01nzv/20/4pfQw1BipXC1FwOdbRife0FN+0WZoHX4ir40AusKv4OfG6PXVlaFxFYldrYKVU9sa5WF4dcixTk8qGJbv3w8JLr0GH4lOMBd1txLojCJepgBhjTnmUeZU7rua6kAUCa0eYlShFa/dtk00dSXf7ONNilJs7hsaEsjr5CDlsrhR4mKlrg+Mr/ujUNn3ZdQcNdjZwQBa7AhXmS6v+rUYGVZTWYEhxvgaA2AyZSMFcuy+dohUq21qLEbZUsMDPe5/n8NBixdYmDp5Tj1q7PKQIV99DA=='
 
-
+st_secret = os.environ.get("ST_SECRET")
 # VARS
 role_id = {'request_id': 'f8f142b7-f126-9961-8cce-bd727b8ea002', 'lease_id': '', 'renewable': False, 'lease_duration': 0, 'data': 
     {'role_id': 'ca6ef0f2-d489-cf6b-505b-4ceb056e6f9f'}, 'wrap_info': None, 'warnings': None, 'auth': None, 'mount_type': 'approle'}
