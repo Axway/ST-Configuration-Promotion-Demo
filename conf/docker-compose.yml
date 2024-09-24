@@ -1,0 +1,24 @@
+version: '3.6'
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    restart: on-failure:10
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    environment:
+      VAULT_ADDR: 'https://0.0.0.0:8200'
+      VAULT_API_ADDR: 'https://0.0.0.0:8200'
+      VAULT_DEV_LISTEN_ADDRESS: '0.0.0.0:8200'
+      VAULT_DEV_ROOT_TOKEN_ID: '5fs7Scw3SBj2EWjIUlH3EyuL'
+      VAULT_TOKEN: '5fs7Scw3SBj2EWjIUlH3EyuL'
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./logs:/vault/logs/:rw
+      - ./data:/vault/data/:rw
+      - ./config:/vault/config/:rw
+      - ./certs:/certs/:rw
+      - ./file:/vault/file/:rw
+    entrypoint: vault server -dev  -dev-tls -dev-listen-address="0.0.0.0:8200"

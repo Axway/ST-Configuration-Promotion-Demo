@@ -1,0 +1,4 @@
+requests>=2.32.3
+hvac>=2.3.0
+urllib3>=2.2.2
+configparser>=7.1.0
