@@ -1,4 +1,6 @@
+import json
 import warnings
+from textwrap import indent
 
 import dotenv
 from funcsession import *
@@ -77,6 +79,9 @@ for i in accountsToMigrate:
         elif site['protocol'] == 'SharePoint':
             site['customProperties']['sharepointApplicationId'] = read_response['data']['data']['sharepointApplicationId']
             site['customProperties']['sharepoint_password'] = read_response['data']['data']['sharepoint_password']
+        elif site['protocol'] == 'http':
+            site['password'] = read_response['data']['data'][
+                'password']
 
 
     res = sess.post(targetST + resource, json=accountSetup)
