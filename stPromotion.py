@@ -82,6 +82,9 @@ for i in accountsToMigrate:
         elif site['protocol'] == 'http':
             site['password'] = read_response['data']['data'][
                 'password']
+        elif site['protocol'] == 'smb':
+
+            site['customProperties']['smbPassword'] = read_response['data']['data']['smbPassword']
 
 
     res = sess.post(targetST + resource, json=accountSetup)
