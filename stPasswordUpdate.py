@@ -33,19 +33,28 @@ client = hvac.Client(
 # EXPORT FROM SOURCE ST
 
 resource = "sites/"
-params = {'account': list(siteToMigrate)[0], 'name': siteToMigrate[list(siteToMigrate)[0]]}
-res = s.get(urlST + resource, params = params)
-sites = res.json()['result'][0]
+
 read_response = client.secrets.kv.v2.read_secret_version(mount_point=vault,
                                                                  path=f'accounts/{list(siteToMigrate)[0]}/sites/{tier}/{siteToMigrate[list(siteToMigrate)[0]]}')
 
 
 
 sess, targetST = Authenticate("ST_PROD")
-resource = 'sites/'
+sess.verify = False
+sess.headers.update({'Accept':'application/json'})
 
-if sites:
-    sites['smbUploadFolder'] = read_response['data']['metadata']['custom_metadata']['smbUploadFolder']
-    sites['smbPassword'] = read_response['data']['data']['smbPassword']
-    response = sess.post(targetST + resource, json=sites)
-    logging.info(f"Site migration status {response.status_code}; Message: {response.text}")
+params = {'account': list(siteToMigrate)[0], 'name': siteToMigrate[list(siteToMigrate)[0]]}
+res = sess.get(targetST + resource, params = params)
+site_id = res.json()['result'][0]['id']
+#
+payload = [
+  {
+    "op": "replace",
+    "path": "/customProperties/smbPassword",
+    "value": ""
+  }
+]
+payload[0]['value'] = read_response['data']['data']['smbPassword']
+
+response = sess.patch(targetST + resource + site_id, json=payload)
+logging.info(f"Password update status {response.status_code}; Message: {response.text}")
