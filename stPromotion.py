@@ -67,24 +67,24 @@ for i in accountsToMigrate:
     for site in accountSetup['accountSetup']['sites']:
         read_response = client.secrets.kv.v2.read_secret_version(mount_point=vault,
                                                                  path=f'accounts/{i}/sites/{tier}/{site["name"]}')
-        if site['protocol'] == 's3':
 
-            site['customProperties']['s3Bucket'] = read_response['data']['metadata']['custom_metadata']['s3Bucket']
-            site['customProperties']['s3AccessKey'] =  read_response['data']['data']['s3AccessKey']
-            site['customProperties']['s3SecretKey'] = read_response['data']['data']['s3SecretKey']
-        elif site['protocol'] == 'azure-file':
+        if site['type'] == 'ExternalPersistedCustomSite':
+            if read_response['data']['metadata']['custom_metadata']:
+                for k, v in read_response['data']['metadata']['custom_metadata'].items():
+                    site['customProperties'][k] = read_response['data']['metadata']['custom_metadata'][k]
+            if read_response['data']['data']:
+                for k, v in read_response['data']['data'].items():
+                    site['customProperties'][k] = read_response['data']['data'][k]
 
-            site['customProperties']['azurefileSpSecret'] = read_response['data']['data']['azurefileSpSecret']
-            site['customProperties']['azurefileAccountKey'] = read_response['data']['data']['azurefileAccountKey']
-        elif site['protocol'] == 'SharePoint':
-            site['customProperties']['sharepointApplicationId'] = read_response['data']['data']['sharepointApplicationId']
-            site['customProperties']['sharepoint_password'] = read_response['data']['data']['sharepoint_password']
         elif site['protocol'] == 'http':
-            site['password'] = read_response['data']['data'][
-                'password']
-        elif site['protocol'] == 'smb':
-
-            site['customProperties']['smbPassword'] = read_response['data']['data']['smbPassword']
+            if read_response['data']['metadata']['custom_metadata']:
+                for k, v in read_response['data']['metadata']['custom_metadata'].items():
+                    site[k] = read_response['data']['metadata']['custom_metadata'][k]
+                    print(site[k])
+            if read_response['data']['data']:
+                for k, v in read_response['data']['data'].items():
+                    site[k] = read_response['data']['data'][k]
+                    print(site[k])
 
 
     res = sess.post(targetST + resource, json=accountSetup)
@@ -94,7 +94,6 @@ for i in accountsToMigrate:
         # print(json.dumps(cr['subscriptions'], indent=4))
         newSubscriptions = []
         for step in cr['steps']:
-
             routeURI = step['metadata']['links']['executeRoute']
             result = s.get(routeURI)
             if result.ok:
