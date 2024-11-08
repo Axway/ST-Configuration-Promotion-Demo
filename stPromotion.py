@@ -1,10 +1,6 @@
-import json
 import warnings
-from textwrap import indent
-
 import dotenv
 from funcsession import *
-
 import hvac
 
 accountsToMigrate = ['hrisy']
@@ -76,15 +72,15 @@ for i in accountsToMigrate:
                 for k, v in read_response['data']['data'].items():
                     site['customProperties'][k] = read_response['data']['data'][k]
 
-        elif site['protocol'] == 'http':
+        else:
             if read_response['data']['metadata']['custom_metadata']:
                 for k, v in read_response['data']['metadata']['custom_metadata'].items():
                     site[k] = read_response['data']['metadata']['custom_metadata'][k]
-                    print(site[k])
+
             if read_response['data']['data']:
                 for k, v in read_response['data']['data'].items():
                     site[k] = read_response['data']['data'][k]
-                    print(site[k])
+
 
 
     res = sess.post(targetST + resource, json=accountSetup)
