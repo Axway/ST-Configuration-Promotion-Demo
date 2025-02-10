@@ -1,21 +1,11 @@
-import requests
 import requests.packages.urllib3
-from requests.packages.urllib3.fields import RequestField, guess_content_type
-import six
 from requests.packages.urllib3.fields import RequestField
 from requests.packages.urllib3.filepost import encode_multipart_formdata
-from requests_toolbelt.utils import dump
 import json
-import logging
-import pprint
-import re
 import warnings
-from argparse import ArgumentParser
-from xml.etree.ElementTree import indent
 import dotenv
-from funcsession import *
+from func import *
 import hvac
-import sys
 from requests_toolbelt.utils import dump
 import os
 import copy
@@ -227,7 +217,6 @@ for i in accountsToMigrate:
         logging.info(f"accountSetup JSON status: {response.status_code}, Message: {response.text}")
         data = dump.dump_all(response)
         logging.debug(data.decode(errors='ignore'))
-        # pprint.pp(accountSetup)
 
     else:
         s_target.headers.update({'Content-Type': content_type})
@@ -307,7 +296,6 @@ for i in accountsToMigrate:
                     s_source.headers.update({'Accept': 'application/json'})
                     s_source.headers.update({'Content-Type': 'application/json'})
                     result = s_source.get(metadataURI)
-                    # print(result.json())
                     if result.ok:
                         data = result.json()
                         data.pop('id')
