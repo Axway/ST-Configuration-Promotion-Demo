@@ -1,6 +1,8 @@
 import configparser
 import logging
 import os
+import re
+
 import requests
 import urllib3
 from requests import session
@@ -18,7 +20,7 @@ def Authenticate(env, add_headers=None):
     logging.basicConfig(
         filename=log,
         format="%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s",
-        level=logging.INFO,  # <<--- Change  this to enable DEBUG
+        level=logging.DEBUG,  # <<--- Change  this to enable DEBUG
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     # READ config.ini
@@ -130,3 +132,81 @@ def loadOrDownload(item):
             # Reading from json file
             data = json.load(openfile)
     return data
+
+
+def read_secret_version(client, vault, path):
+    """Read the secret version from the vault."""
+    return client.secrets.kv.v2.read_secret_version(mount_point=vault, path=path)
+
+
+def migrate_route_templates(s_source, source_ST, s_target, target_ST, resource):
+    params = {'type': 'TEMPLATE'}
+    res = s_source.get(source_ST + resource, params=params)
+    routeTemplates = res.json()['result']
+    for i in routeTemplates:
+        checkIfExist = s_target.head(target_ST + resource + i['id'])
+        if not checkIfExist.ok:
+            if not i['steps']:
+                response = s_target.post(target_ST + resource, json=i)
+                logging.info(f"Route Template {i['name']} created, status {response.status_code}")
+            else:
+                logging.warning(f"LIMITATION: Cannot migrate template routes with steps, route {i['name']} omitted")
+        else:
+            logging.info(f"Route Template {i['name']} already exists at target")
+
+def update_site_properties(site, metadata, data):
+    """Update site properties for transfer site types."""
+    if metadata:
+        for k, v in metadata.items():
+            site[k] = v
+    if data:
+        for k, v in data.items():
+            site[k] = v
+
+def update_custom_properties(site, metadata, data):
+    """Update custom properties for ExternalPersistedCustomSite."""
+    if metadata:
+        for k, v in metadata.items():
+            site['customProperties'][k] = v.replace("\n", "\\n")
+    if data:
+        for k, v in data.items():
+            site['customProperties'][k] = v
+
+
+def update_certificate(cert, keyname):
+    lines = cert.splitlines(keepends=True)
+    new_lines = []
+    pattern = r'Content-Disposition: attachment; filename=".*"'
+    text_to_add = f'keyname: {keyname}\nencoded: false'
+    for line in lines:
+        new_lines.append(line)
+        if re.search(pattern, line):
+            new_lines.append(text_to_add + '\n')
+    return "".join(new_lines)
+
+def delete_line_from_cert(cert, line_number):
+    """Deletes a line from a string.
+
+    Args:
+        cert: The string to delete the line from.
+        line_number: The line number to delete (1-based index).
+
+    Returns:
+        The string with the line deleted, or the original string if the
+        line number is invalid.
+    """
+    cert_json = os.linesep.join([s for s in cert.splitlines() if s])
+    lines = cert_json.splitlines()
+
+    if 1 <= line_number <= len(lines):
+        lines.pop(line_number - 1)
+        return "\n".join(lines)
+    else:
+        return cert
+
+def delete_headers_from_cert(cert):
+    cert_json = os.linesep.join([s for s in cert.splitlines() if s])
+    lines = cert_json.splitlines()
+    return "\n".join(lines[2:])
+
+
