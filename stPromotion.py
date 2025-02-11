@@ -1,4 +1,3 @@
-import requests.packages.urllib3
 from requests.packages.urllib3.fields import RequestField
 from requests.packages.urllib3.filepost import encode_multipart_formdata
 import json
