@@ -1,3 +1,8 @@
+# This is provided as-is, and you should run it at your own risk.
+# This is provided in order to provide usage examples and Axway cannot guarantee it is fit for production,
+# or provide ongoing support for it.
+# Author: Hristina Stoykova
+
 from requests.packages.urllib3.fields import RequestField
 from requests.packages.urllib3.filepost import encode_multipart_formdata
 import json
