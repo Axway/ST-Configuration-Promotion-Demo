@@ -3,9 +3,9 @@
 # or provide ongoing support for it.
 # Author: Hristina Stoykova
 
+
 from requests.packages.urllib3.fields import RequestField
 from requests.packages.urllib3.filepost import encode_multipart_formdata
-import json
 import warnings
 import dotenv
 from func import *
@@ -13,7 +13,7 @@ import hvac
 from requests_toolbelt.utils import dump
 import os
 import copy
-
+import pprint
 
 # Load environment variables
 dotenv_path = ".env"
@@ -46,37 +46,12 @@ s_target.headers.update({'Content-Type': 'application/json'})
 # SETTINGS
 accountsToMigrate = ['hrisy']
 
-
-
-
-# FUNCTIONS
-def extract_pgp_keys(raw_content):
-    # Decode the bytes to a string
-    raw_content_str = raw_content.decode('utf-8')  # assuming the content is UTF-8 encoded
-
-    # Regular expressions to capture the public and private keys
-    public_key_pattern = r'-----BEGIN PGP PUBLIC KEY BLOCK-----.*?-----END PGP PUBLIC KEY BLOCK-----'
-    private_key_pattern = r'-----BEGIN PGP PRIVATE KEY BLOCK-----.*?-----END PGP PRIVATE KEY BLOCK-----'
-
-    # Find all matches
-    public_key_matches = re.findall(public_key_pattern, raw_content_str, re.DOTALL)
-    private_key_matches = re.findall(private_key_pattern, raw_content_str, re.DOTALL)
-
-    # Extract the keys
-    public_key = public_key_matches[0] if public_key_matches else None
-    private_key = private_key_matches[0] if private_key_matches else None
-
-    return public_key, private_key
-
-
 ### IMPORT TO TARGET ST
 ## MIGRATE TEMPLATE ROUTES
 resource = "routes/"
 s_target.headers.update({'Accept': 'application/json'})
 s_target.headers.update({'Content-Type': 'application/json'})
-migrate_route_templates(s_source, source_ST,s_target, target_ST, resource)
-
-
+migrate_route_templates(s_source, source_ST, s_target, target_ST, resource)
 
 ### HANDLE ACCOUNTS MIGRATION
 
@@ -88,9 +63,6 @@ for i in accountsToMigrate:
     accountSetup['accountSetup']['account']['disabled'] = True
     # CERTIFICATE SETTINGS
     certificates = copy.deepcopy(accountSetup['accountSetup']['certificates'])
-    accountSetup['accountSetup']['certificates']['partner'].clear()
-    accountSetup['accountSetup']['certificates']['private'].clear()
-    accountSetup['accountSetup']['certificates']['login'].clear()
     # ROUTES
     compositeRoutes = copy.deepcopy(accountSetup['accountSetup']['routes'])
     for route in accountSetup['accountSetup']['routes']:
@@ -100,121 +72,75 @@ for i in accountsToMigrate:
                 route['steps'].remove(step)
     # SUBSCRIPTIONS
     subscriptions = copy.deepcopy(accountSetup['accountSetup']['subscriptions'])
-    for subscription in accountSetup['accountSetup']['subscriptions']:
-        if subscription['type'] != 'AdvancedRouting':
-            for tc in subscription['transferConfigurations']:
-                tc.pop('id')
-        else:
-            accountSetup['accountSetup']['subscriptions'].remove(subscription)
-    subscriptions = copy.deepcopy(accountSetup['accountSetup']['subscriptions'])
+
     # TRANSFER SITES
-    for site in accountSetup['accountSetup']['sites']:
-        path = f'accounts/{i}/sites/{tier}/{site["name"]}'
-        read_response = read_secret_version(client, vault, path)
-        metadata = read_response['data']['metadata'].get('custom_metadata', {})
-        data = read_response['data'].get('data', {})
+    sites = copy.deepcopy(accountSetup['accountSetup']['sites'])
+    accountSetup['accountSetup']['sites'].clear()
+    accountSetup['accountSetup']['subscriptions'].clear()
+    fields = []
 
-        if site['type'] == 'ExternalPersistedCustomSite':
-            update_custom_properties(site, metadata, data)
-        else:
-            update_site_properties(site, metadata, data)
-
-        site.pop('siteName', None)
-    if certificates:
-        resource = 'certificates/'
-        fields = []
-        del s_source.headers['content-type']
-        if certificates['partner']:
-            for cert in certificates['partner']:
-                params = {'account': i, 'type': cert['type'], 'usage': 'partner', 'name': cert['alias']}
-                checkIfExists = s_target.get(target_ST + resource, params=params)
-                checkIfExistsResult = checkIfExists.json()
-
-                if cert['type'] == 'x509' and not checkIfExistsResult['result']:
-                    s_source.headers.update({'Accept': 'multipart/mixed'})
-                    cert_res = s_source.get(source_ST + "certificates/" + cert['keyName'])
-                    text = cert_res.text
-                    # # Regular expression to extract the boundary part
-                    boundary_pattern = r'--Boundary_\d+_\d+_\d+'
-                    # EXTRACT THE DIFFERENT PARTS
-                    boundary_match = re.search(boundary_pattern, text)
-                    if not boundary_match:
-                        raise ValueError("Boundary not found in the text")
-                    boundary = boundary_match.group()
-                    # Split the text by the boundary
-                    parts = re.split(boundary, text)
-                    jsonData = json.loads(delete_line_from_cert( parts[1], 1))
-                    x509 = delete_headers_from_cert(parts[2])
-                    keyname = cert['keyName'] = cert['alias']
-                    cert['generate'] = False
-                    del cert['caPassword']
-                    del cert['certificatePassword']
-                    files = {f"{keyname}": (x509, 'application/octet-stream', {'keyname': f"{keyname}", 'encoded': 'false'})}
-                    for name, (contents, mimetype, headers) in files.items():
-                        rf = RequestField(name=name, data=contents, headers=headers)
-                        rf.make_multipart(content_disposition='attachment', content_type=mimetype)
-                        fields.append(rf)
-                    accountSetup['accountSetup']['certificates']['partner'].append(cert)
+    resource = 'certificates/'
+    del s_source.headers['content-type']
+    if accountSetup['accountSetup']['certificates']['partner']:
+        for cert in accountSetup['accountSetup']['certificates']['partner'][:]:
+            params = {'account': i, 'type': cert['type'], 'usage': 'partner', 'name': cert['alias']}
+            checkIfExists = s_target.get(target_ST + resource, params=params)
+            checkIfExistsResult = checkIfExists.json()
+            if not checkIfExistsResult['result']:
+                s_source.headers.update({'Accept': 'multipart/mixed'})
+                cert_res = s_source.get(source_ST + "certificates/" + cert['keyName'])
+                if cert_res.ok:
+                    json_info, cert_binary, rf = parse_certificates(cert_res)
                 else:
-                    certificates['partner'].remove(cert)
-        if certificates['private']:
+                    print(cert_res.text)
+                keyname = cert['keyName'] = cert['alias']
+                cert['generate'] = False
+                if 'caPassword' in cert:
+                    del cert['caPassword']
+                del cert['certificatePassword']
 
-            for cert in certificates['private']:
-                params = {'account': i, 'type': cert['type'], 'usage': 'private', 'name': cert['alias']}
-                checkIfExists = s_target.get(target_ST + resource, params=params)
-                checkIfExistsResult = checkIfExists.json()
-                if cert['type'] == 'pgp' and not checkIfExistsResult['result']:
-                    s_source.headers.update({'Accept': 'multipart/mixed'})
-                    params = {'password': 'password', 'exportPrivateKey': 'true'}
-                    cert_res = s_source.get(source_ST + "certificates/" + cert['keyName'], params=params)
-                    text = cert_res.content
-                    boundary_pattern = r'boundary=([a-zA-Z0-9_-]+)'
-                    # EXTRACT THE DIFFERENT PARTS
-                    match = re.search(boundary_pattern, cert_res.headers['Content-Type'])
-                    if not match:
-                        raise ValueError("Boundary not found in the text")
-                    boundary = ('--' + match.group(1)).encode()
-                    parts = text.split(boundary)
-                    # Loop through each part and process
-                    for part in parts:
-                        part = part.strip()  # Clean the part to avoid any leading/trailing spaces
+                fields.append(rf)
+            else:
+                accountSetup['accountSetup']['certificates']['partner'].remove(cert)
+    if accountSetup['accountSetup']['certificates']['private']:
+        for cert in accountSetup['accountSetup']['certificates']['private'][:]:
+            params = {'account': i, 'usage': 'private', 'name': cert['alias']}
+            checkIfExists = s_target.get(target_ST + resource, params=params)
+            checkIfExistsResult = checkIfExists.json()
+            if not checkIfExistsResult['result']:
+                s_source.headers.update({'Accept': 'multipart/mixed'})
+                params = {'password': 'password', 'exportPrivateKey': 'true'}
+                cert_res = s_source.get(source_ST + "certificates/" + cert['keyName'], params=params)
+                if cert_res.ok:
+                    json_info, cert_binary, rf = parse_certificates(cert_res)
+                else:
+                    print(cert_res.text)
+                keyname = cert['keyName'] = cert['alias']
+                cert['generate'] = False
+                cert['certificatePassword'] = params['password']
+                if cert['type'] == 'ssh':
+                    cert['type'] = 'x509'
 
-                        if not part:
-                            continue
-                        # Check if part is JSON (looking for Content-Type: application/json)
-                        if b"Content-Type: application/json" in part:
-                            try:
-                                json_start = part.index(b"{")  # Find the start of the JSON data
-                                json_end = part.rindex(b"}")  # Find the end of the JSON data
-                                raw_json = part[json_start:json_end + 1]
-                                json_data = json.loads(raw_json.decode('utf-8'))
-                            except Exception as e:
-                                print("Error decoding JSON:", e)
-                    public_pgp, private_pgp = extract_pgp_keys(text)
-                    pgp_import = public_pgp + '\n' + private_pgp
+                fields.append(rf)
+            else:
+                accountSetup['accountSetup']['certificates']['private'].remove(cert)
+    files = {"accountSetup": (json.dumps(accountSetup), "application/json")}
+    for name, (contents, mimetype) in files.items():
+        rf = RequestField(name=name, data=contents)
+        rf.make_multipart(content_disposition='attachment', content_type=mimetype)
+        fields.append(rf)
+    post_body, content_type = encode_multipart_formdata(fields)
+    content_type = ''.join(('multipart/mixed',) + content_type.partition(';')[1:])
 
-                    keyname = cert['keyName'] = cert['alias']
-                    cert['generate'] = False
-                    cert['certificatePassword'] = params['password']
-                    files = {
-                        f"{keyname}": (pgp_import, 'application/octet-stream', {'keyname': f"{keyname}", 'encoded': 'false'})}
-                    for name, (contents, mimetype, headers) in files.items():
-                        rf = RequestField(name=name, data=contents, headers=headers)
-                        rf.make_multipart(content_disposition='attachment', content_type=mimetype)
-                        fields.append(rf)
-                    accountSetup['accountSetup']['certificates']['private'].append(cert)
-        files = {"accountSetup": (json.dumps(accountSetup), "application/json")}
-        for name, (contents, mimetype) in files.items():
-            rf = RequestField(name=name, data=contents)
-            rf.make_multipart(content_disposition='attachment', content_type=mimetype)
-            fields.append(rf)
-        post_body, content_type = encode_multipart_formdata(fields)
-        content_type = ''.join(('multipart/mixed',) + content_type.partition(';')[1:])
-
+    for subs in accountSetup['accountSetup']['subscriptions']:
+        for transferConf in subs['transferConfigurations']:
+            if 'id' in transferConf:
+                transferConf.pop('id')
 
     # IMPORT ACCOUNT, SITES, COMPOSITE ROUTES, AND NON AR SUBSCRIPTIONS
     resource = 'accountSetup/'
-    if not (accountSetup['accountSetup']['certificates']['partner'] or accountSetup['accountSetup']['certificates']['private']):
+    if not (accountSetup['accountSetup']['certificates']['private'] or accountSetup['accountSetup']['certificates'][
+        'partner']):
         s_target.headers.update({'Accept': 'application/json'})
         s_target.headers.update({'Content-Type': 'application/json'})
         response = s_target.post(target_ST + resource, json=accountSetup)
@@ -230,6 +156,35 @@ for i in accountsToMigrate:
         data = dump.dump_all(response)
         logging.info(f"accountSetup status: {response.status_code}, Message: {response.text}")
         logging.debug(data.decode(errors='ignore'))
+
+    s_target.headers.update({'Accept': 'application/json'})
+    s_target.headers.update({'Content-Type': 'application/json'})
+    res_accountSetup = s_target.get(target_ST + resource + i)
+    accountSetupTaget = res_accountSetup.json()
+    targetSites = []
+    for site_target in accountSetupTaget['accountSetup']['sites']:
+        targetSites.append(site_target['name'])
+    for site in sites:
+        if site['name'] not in targetSites:
+            path = f'accounts/{i}/sites/{tier}/{site["name"]}'
+            read_response = read_secret_version(client, vault, path)
+            metadata = read_response['data']['metadata'].get('custom_metadata', {})
+            data = read_response['data'].get('data', {})
+            if site['type'] == 'ExternalPersistedCustomSite':
+                update_custom_properties(site, metadata, data)
+            else:
+                update_site_properties(site, metadata, data)
+            if 'clientCertificate' in site and site['clientCertificate']:
+                for c in certificates['private']:
+                    if c['keyName'] == site['clientCertificate']:
+                        for c_target in accountSetupTaget['accountSetup']['certificates']['private']:
+                            if c['alias'] == c_target['alias']:
+                                site['clientCertificate'] = c_target['keyName']
+            site.pop('siteName', None)
+            resource = 'sites/'
+            s_target.headers.update({'Accept': 'application/json'})
+            s_target.headers.update({'Content-Type': 'application/json'})
+            response_s = s_target.post(target_ST + resource, json=site)
 
     # UPDATE COMPOSITE ROUTES
     for c_route in compositeRoutes:
@@ -326,3 +281,14 @@ for i in accountsToMigrate:
             s_target.headers.update({'Content-Type': 'application/json'})
             response = s_target.patch(target_ST + resource + new_c_route_id, json=payload)
             logging.info(f"subscription update status {response.status_code}; Message: {response.text}")
+    resource = 'subscriptions/'
+    targetSites = []
+    for sub_target in accountSetupTaget['accountSetup']['subscriptions']:
+        targetSites.append(sub_target['folder'])
+    for subscription in subscriptions[:]:
+        if subscription['type'] != 'AdvancedRouting' and subscription['folder'] not in targetSites:
+            subscription.pop('id')
+            for tc in subscription['transferConfigurations']:
+                tc.pop('id')
+            response = s_target.post(target_ST + resource, json=subscription)
+            print(response.text)

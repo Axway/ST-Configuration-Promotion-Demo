@@ -2,6 +2,10 @@ import configparser
 import logging
 import os
 import re
+from requests_toolbelt.multipart import decoder
+from requests.packages.urllib3.fields import RequestField
+from requests.packages.urllib3.filepost import encode_multipart_formdata
+
 
 import requests
 import urllib3
@@ -20,7 +24,7 @@ def Authenticate(env, add_headers=None):
     logging.basicConfig(
         filename=log,
         format="%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s",
-        level=logging.DEBUG,  # <<--- Change  this to enable DEBUG
+        level=logging.INFO,  # <<--- Change  this to enable DEBUG
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     # READ config.ini
@@ -210,3 +214,84 @@ def delete_headers_from_cert(cert):
     return "\n".join(lines[2:])
 
 
+import re
+import json
+
+
+def process_text(cert_res):
+    text = cert_res.content
+    boundary_pattern = r'boundary=([a-zA-Z0-9_-]+)'
+
+    # EXTRACT THE DIFFERENT PARTS
+    match = re.search(boundary_pattern, cert_res.headers['Content-Type'])
+    if not match:
+        raise ValueError("Boundary not found in the text")
+
+    boundary = ('--' + match.group(1)).encode()
+    parts = text.split(boundary)
+
+    # Loop through each part and process
+    for part in parts:
+        part = part.strip()  # Clean the part to avoid any leading/trailing spaces
+
+        if not part:
+            continue
+
+        # Check if part is JSON (looking for Content-Type: application/json)
+        if b"Content-Type: application/json" in part:
+            try:
+                json_start = part.index(b"{")  # Find the start of the JSON data
+                json_end = part.rindex(b"}")  # Find the end of the JSON data
+                raw_json = part[json_start:json_end + 1]
+                json_data = json.loads(raw_json.decode('utf-8'))
+            except Exception as e:
+                print("Error decoding JSON:", e)
+    public_pgp, private_pgp = extract_pgp_keys(text)
+    if private_pgp:
+        pgp_import = public_pgp + '\n' + private_pgp
+    else:
+        pgp_import = public_pgp
+
+    return pgp_import
+
+def extract_pgp_keys(raw_content):
+    # Decode the bytes to a string
+    raw_content_str = raw_content.decode('utf-8')  # assuming the content is UTF-8 encoded
+
+    # Regular expressions to capture the public and private keys
+    public_key_pattern = r'-----BEGIN PGP PUBLIC KEY BLOCK-----.*?-----END PGP PUBLIC KEY BLOCK-----'
+    private_key_pattern = r'-----BEGIN PGP PRIVATE KEY BLOCK-----.*?-----END PGP PRIVATE KEY BLOCK-----'
+
+    # Find all matches
+    public_key_matches = re.findall(public_key_pattern, raw_content_str, re.DOTALL)
+    private_key_matches = re.findall(private_key_pattern, raw_content_str, re.DOTALL)
+
+    # Extract the keys
+    public_key = public_key_matches[0] if public_key_matches else None
+    private_key = private_key_matches[0] if private_key_matches else None
+
+    return public_key, private_key
+
+def parse_certificates(cert_multipart):
+    multipart_data = decoder.MultipartDecoder.from_response(cert_multipart)
+
+    for part in multipart_data.parts:
+        decoded_header = part.headers[b'Content-Type'].decode('utf-8')
+        if decoded_header == 'application/octet-stream':
+            disposition = part.headers[b'Content-Disposition'].decode('utf-8')
+            for content_info in str(disposition).split(';'):
+                info = content_info.split('=', 2)
+                if info[0].strip() == 'filename':
+                    filename = info[1].strip('\"\'\t \r\n')
+            certFile = part.content
+        elif decoded_header == "application/json":
+            jsonData = json.loads(part.text)
+        else:
+            print(decoded_header)
+    keyname  = jsonData['name']
+    files = {f"{keyname}": (
+        certFile, 'application/octet-stream', {'keyname': f"{keyname}", 'encoded': 'false'})}
+    for name, (contents, mimetype, headers) in files.items():
+        rf = RequestField(name=name, data=contents, headers=headers)
+        rf.make_multipart(content_disposition='attachment', content_type=mimetype)
+    return jsonData, certFile, rf
