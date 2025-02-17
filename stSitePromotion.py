@@ -59,4 +59,9 @@ for sites in siteToMigrate:
             else:
                 print(response.text)
         else:
-            logging.info(f"Site {site['name']} already exists")
+            logging.info(f"Site {site['name']} already exists, updating...")
+            response = s_target.put(target_ST + resource + checkIfExistsResult['result'][0]['id'], json=site)
+            if response.ok:
+                logging.info(f"Site {site['name']} update successful")
+            else:
+                print(response.text)
