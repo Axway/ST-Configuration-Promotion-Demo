@@ -46,12 +46,9 @@ for sites in siteToMigrate:
         path = f'accounts/{k}/sites/{tier}/{v}'
         read_response = read_secret_version(client, vault, path)
         data = read_response['data'].get('data', {})
-        print(data)
         del data['siteName']
-        print(data)
         for key, value in data.items():
             site['customProperties'][key] = value
-            print(data)
             payload = [
                 {
                     "op": "replace",
