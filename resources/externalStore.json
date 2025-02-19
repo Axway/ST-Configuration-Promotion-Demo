@@ -1,0 +1,56 @@
+{
+  "name": "externalStoreName",
+  "version": "2",
+  "method": "GET",
+  "authHeader": "X-CustomAuth-Token",
+  "headers": {
+    "X-CustomAuth-Token": "${vault.api.auth.token}"
+  },
+  "attributePrefix": "attribute-Prefix",
+  "pathPrefix": "$.path.Prefix",
+  "cacheTimeout": 0,
+  "insecure": false,
+  "tls": {
+    "protocols": [
+      "string"
+    ],
+    "ciphers": [
+      "string"
+    ],
+    "caAliases": [
+      "string"
+    ],
+    "certificateAlias": "empty",
+    "skipHostNameVerification": false
+  },
+  "auth": {
+    "baseUrl": "string",
+    "uri": "/uriPath",
+    "openTimeout": 5,
+    "readTimeout": 10,
+    "maxRetries": 3,
+    "retryIntervalMs": 100,
+    "headers": {},
+    "body": {},
+    "token": "empty",
+    "tls": {
+      "protocols": [
+        "string"
+      ],
+      "ciphers": [
+        "string"
+      ],
+      "caAliases": [
+        "string"
+      ],
+      "certificateAlias": "empty",
+      "skipHostNameVerification": false
+    }
+  },
+  "baseUrl": "string",
+  "uri": "/uriPath",
+  "openTimeout": 5,
+  "readTimeout": 10,
+  "maxRetries": 3,
+  "retryIntervalMs": 100
+}
