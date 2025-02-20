@@ -1,6 +1,5 @@
 import pprint
 import warnings
-
 import dotenv
 from func import *
 
@@ -22,7 +21,7 @@ auth_method = 'appRole'
 # auth_method = 'cert'
 
 # Open and read the JSON file
-with open('resources/externalStore.json', 'r') as file:
+with open('resources/externalStore.json') as file:
     json_data = json.load(file)
 json_data['name'] = 'HashiCorp'
 json_data['attributePrefix'] = ''
@@ -52,7 +51,6 @@ elif auth_method == 'cert':
     json_data['tls']['certificateAlias'] = 'hashi_auth'
     json_data['auth']['body'] = {'name': 'st-ca'}
     json_data['auth']['uri'] = '/v1/auth/cert/login'
-
 
 pprint.pp(json_data)
 resource = 'configurations/externalStores/'
