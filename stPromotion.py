@@ -13,7 +13,7 @@ import hvac
 from requests_toolbelt.utils import dump
 import os
 import copy
-import pprint
+import urllib3
 
 # Load environment variables
 dotenv_path = ".env"
@@ -21,6 +21,7 @@ dotenv.load_dotenv(dotenv_path)
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Hashi
 hashiToken = os.environ.get("VAULT_TOKEN")
