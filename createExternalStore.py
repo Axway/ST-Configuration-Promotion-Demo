@@ -3,7 +3,7 @@ import warnings
 import dotenv
 from func import *
 
-s_target, target_ST = Authenticate("ST_PROD")
+s_target, target_ST = Authenticate("ST_NON_PROD")
 s_target.verify = False
 s_target.headers.update({'Accept': 'application/json'})
 s_target.headers.update({'Content-Type': 'application/json'})
@@ -58,5 +58,5 @@ response = s_target.post(target_ST + resource, json=json_data)
 print(response.text)
 
 # Sample usage in ST
-# ${fetch('HashiCorp','/accounts/hrisy/sites/production/s3','s3SecretKey')}
+# ${fetch('HashiCorp','/accounts/hrisy/sites/production/s3','aws_secretKey')}
 # ${fetch('HashiCorp','/accounts/hrisy/sites/production/s3','aws_bucketName')}
