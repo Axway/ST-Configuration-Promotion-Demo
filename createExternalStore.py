@@ -3,7 +3,7 @@ import warnings
 import dotenv
 from func import *
 
-s_target, target_ST = Authenticate("ST_NON_PROD")
+s_target, target_ST = Authenticate("ST_PROD")
 s_target.verify = False
 s_target.headers.update({'Accept': 'application/json'})
 s_target.headers.update({'Content-Type': 'application/json'})
