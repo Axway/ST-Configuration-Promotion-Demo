@@ -186,6 +186,11 @@ for i in accountsToMigrate:
             s_target.headers.update({'Accept': 'application/json'})
             s_target.headers.update({'Content-Type': 'application/json'})
             response_s = s_target.post(target_ST + resource, json=site)
+            if response_s.ok:
+                logging.info(f"site create status: {response.status_code}, Message: {response.text}")
+            else:
+                print(response_s.text)
+                print(site)
 
     # UPDATE COMPOSITE ROUTES
     for c_route in compositeRoutes:
