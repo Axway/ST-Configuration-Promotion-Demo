@@ -20,6 +20,7 @@ path = f'/v1/SecureTransport/data/'
 auth_method = 'appRole'
 # auth_method = 'cert'
 
+
 # Open and read the JSON file
 with open('resources/externalStore.json') as file:
     json_data = json.load(file)
