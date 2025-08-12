@@ -28,15 +28,15 @@ def Authenticate(env, add_headers=None):
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     # READ config.ini
-    ADMIN_HOST = config.get(env, "ADMIN_HOST")
-    ADMIN_PORT = config.get(env, "ADMIN_PORT")
-    ADMIN_USER = config.get(env, "ADMIN_USER")
-    ADMIN_PASS = config.get(env, "ADMIN_PASS")
+    ST_HOST = config.get(env, "ST_HOST")
+    ST_PORT = config.get(env, "ST_PORT")
+    ST_USER = config.get(env, "ST_USER")
+    ST_PASS = config.get(env, "ST_PASS")
     API_VERSION = config.get(env, "API_VERSION")
     SAML_USED = config.get(env, "SAML_USED")
     ST_AUTH = config.get(env, "ST_AUTH")
     # Here we Log in to the API
-    ST_url = "https://{}:{}/api/v{}/".format(ADMIN_HOST, ADMIN_PORT, API_VERSION)
+    ST_url = "https://{}:{}/api/v{}/".format(ST_HOST, ST_PORT, API_VERSION)
     # This is needed to ignore the untrusted certificate warning
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     if ST_AUTH == "2" or ST_AUTH == "3" or ST_AUTH == "4":
@@ -60,11 +60,12 @@ def Authenticate(env, add_headers=None):
         # Merge environment settings into session
         c.verify = False
         c.headers.update(headers)
-        c.get(ST_url)
+        # resp = c.get(ST_url)
+        # print(resp.text)
 
         try:
             if ST_AUTH == "1":
-                c.auth = (ADMIN_USER, ADMIN_PASS)
+                c.auth = (ST_USER, ST_PASS)
                 response = c.post(ST_url + "myself")
             elif ST_AUTH == "2" or ST_AUTH == "4":
                 c.mount(
@@ -73,13 +74,13 @@ def Authenticate(env, add_headers=None):
                 )  # STU
                 response = c.post(ST_url + "myself")
             elif ST_AUTH == "3":
-                c.auth = (ADMIN_USER, ADMIN_PASS)
+                c.auth = (ST_USER, ST_PASS)
                 c.mount(
                     ST_url,
                     Pkcs12Adapter(pkcs12_filename=CERT_FILE, pkcs12_password=CERT_PWD),
                 )  # STU
                 response = c.post(ST_url + "myself")
-            if response.headers["csrfToken"]:
+            if 'csrfToken' in response.headers:
                 c.headers.update({"csrfToken": response.headers["csrfToken"]})
             response.raise_for_status()
             debug = dump.dump_response(response)

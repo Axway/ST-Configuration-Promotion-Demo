@@ -25,7 +25,7 @@ class CreateExternalVault:
         self.config = config
 
         # Create a HttpClient instance
-        self.s_target = Authenticator("ST_PROD")
+        self.s_target = Authenticator(config)
 
         # SETTINGS
         warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -86,7 +86,7 @@ class CreateExternalVault:
 
 
 # Example usage
-createStore = CreateExternalVault(auth_method='cert')
+createStore = CreateExternalVault(auth_method='cert', config='ST_NON_PROD')
 login_response = createStore.login()
 post_response = createStore.post_configuration()
 print(post_response)

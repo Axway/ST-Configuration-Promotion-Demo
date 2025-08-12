@@ -1,0 +1,2 @@
+[MASTER]
+disable=C0103, missing-docstring, wrong-import-order
