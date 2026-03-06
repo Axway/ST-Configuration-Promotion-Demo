@@ -52,7 +52,7 @@ st.set_page_config(
     layout="centered",
 )
 
-st.title("🔄 ST Configuration Promotion")
+st.title("ST Configuration Promotion")
 st.markdown("Promote accounts or individual transfer sites between SecureTransport servers.")
 
 # ── Server selection ────────────────────────────────────────────────────────
