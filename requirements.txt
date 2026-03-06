@@ -5,3 +5,4 @@ configparser>=7.1.0
 python-dotenv>=1.0.0
 requests-toolbelt>=1.0.0
 requests-pkcs12>=1.22
+streamlit>=1.40.0
