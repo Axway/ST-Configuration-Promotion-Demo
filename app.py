@@ -87,15 +87,18 @@ st.header("2 · Choose what to promote")
 
 mode = st.radio(
     "Promotion mode",
-    options=["Full account", "Single transfer site"],
+    options=["Full account", "Single transfer site", "Routes only"],
     horizontal=True,
 )
 
 account_name = st.text_input("Account name", placeholder="e.g. hrisy")
 
 site_name = None
+route_name = None
 if mode == "Single transfer site":
     site_name = st.text_input("Transfer site name", placeholder="e.g. SMB")
+elif mode == "Routes only":
+    route_name = st.text_input("Composite route name", placeholder="e.g. MyRoute")
 
 # ── Run ─────────────────────────────────────────────────────────────────────
 
@@ -104,7 +107,11 @@ st.header("3 · Run promotion")
 can_run = (
     source != target
     and account_name.strip()
-    and (mode == "Full account" or (site_name and site_name.strip()))
+    and (
+        mode == "Full account"
+        or (mode == "Single transfer site" and site_name and site_name.strip())
+        or (mode == "Routes only" and route_name and route_name.strip())
+    )
 )
 
 if st.button("Start promotion", disabled=not can_run, type="primary", use_container_width=True):
@@ -119,9 +126,15 @@ if st.button("Start promotion", disabled=not can_run, type="primary", use_contai
     if mode == "Full account":
         script = "stPromotion.py"
         env["SITE_NAME"] = ""
+        env["ROUTE_NAME"] = ""
+    elif mode == "Routes only":
+        script = "stRoutePromotion.py"
+        env["SITE_NAME"] = ""
+        env["ROUTE_NAME"] = route_name.strip()
     else:
         script = "stSitePromotion.py"
         env["SITE_NAME"] = site_name.strip()
+        env["ROUTE_NAME"] = ""
 
     st.info(f"Running **{script}** — promoting **{account}** from **{source}** → **{target}** …")
 
